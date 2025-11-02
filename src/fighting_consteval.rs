@@ -114,7 +114,6 @@ pub const unsafe fn get_unspecified_from_unordered_and_specified_decls<
         match &*val {
             &Some(ref t) => 
                 final_buf[j].write((&raw const *t).read()),
-            // &None => panic!("Not enough unspecified declarations provided"),
             &None => return Err(OrderDeclsError::RanOutOfDecls),
         };
         j += 1;
@@ -216,7 +215,6 @@ pub const unsafe fn order_decls_properly<T, const LEN_TOTAL: usize, const LEN_SP
         }
         break 'all_entries_from_total_exist_in_result true;
     } {
-        // "Some variants from unordered declarations were not included in the final ordered slice."
         return Err(OrderDeclsError::FinalSliceMissingEntries);
     }
 

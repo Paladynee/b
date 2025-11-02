@@ -39,7 +39,7 @@ macro_rules! enum_with_order {
                 on the const stack which we can modify freely and return by-value. this is all it does.
             */
             const __ORDER_AND_NAMES_SLICES: (*const [$Ident], *const [*const c_char]) = {
-                use $Ident::*;
+                #[allow(unused_imports)]
                 use $crate::fighting_consteval::*;
                 #[allow(unused_imports)]
                 use $crate::c;
@@ -49,25 +49,27 @@ macro_rules! enum_with_order {
                 // this is the slice of declarations in declaration order. declaration order does not mean
                 // order of appearance in the ORDER_SLICE, as rust allows explicit discriminants.
                 const DECLS_AMOUNT: usize = UNORDERED_DECLS.len();
-                const UNORDERED_DECLS: *const [($Ident, *const c_char)] = &[
-                    $(
-                        ($Item, c!(stringify!($Item)))
-                    ),*
-                ];
+                const UNORDERED_DECLS: *const [($Ident, *const c_char)] = {
+                    &[
+                        $(
+                            ($Ident::$Item, c!(stringify!($Item)))
+                        ),*
+                    ]
+                };
                 // this is the slice of declarations that have a specified enum discriminant requirement.
                 // the order of elements inside this slice doesn't really matter.
                 // we don't have to worry about clashing requirements as the enum declaration itself handles that for us.
                 const AMOUNT_SPECIFIED: usize = SPECIFIED_DISCRIMINANTS.len();
-                const SPECIFIED_DISCRIMINANTS: *const [($Ident, *const c_char, u128)] = &[
-                    $( $(
-                        ($Item, c!(stringify!($Item)), $init), // negative discriminants are not supported, as Self::ORDER_SLICE would need to go backwards.
-                    )? )*
-                ];
+                const SPECIFIED_DISCRIMINANTS: *const [($Ident, *const c_char, u128)] = {
+                    &[
+                        $( $(
+                            ($Ident::$Item, c!(stringify!($Item)), $init), // negative discriminants are not supported, as Self::ORDER_SLICE would need to go backwards.
+                        )? )*
+                    ]
+                };
                 // we pass the unordered declarations and the discriminant requirements to `order_decls_properly`,
                 // which handles the discriminant resolution in a const fn that is fully evaluated at const.
                 const RES: ([$Ident; DECLS_AMOUNT], [*const c_char; DECLS_AMOUNT]) = unsafe {
-                    #[allow(unused_imports)]
-                    use OrderDeclsError::*;
                     match const { order_decls_properly::<$Ident, DECLS_AMOUNT, AMOUNT_SPECIFIED>(
                         &*mkarray::<_, DECLS_AMOUNT>(UNORDERED_DECLS),
                         &*mkarray::<_, AMOUNT_SPECIFIED>(SPECIFIED_DISCRIMINANTS)
