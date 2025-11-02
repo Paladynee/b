@@ -6,6 +6,7 @@
 
 #[macro_use]
 pub mod crust;
+pub mod fighting_consteval;
 #[macro_use]
 pub mod nob;
 pub mod targets;
@@ -200,7 +201,7 @@ pub unsafe fn usage() {
 
 #[derive(Clone, Copy)]
 pub struct ReportStats {
-    entries: [usize; REPORT_STATUS_ORDER.len()]
+    entries: [usize; ReportStatus::ORDER_SLICE.len()]
 }
 
 const RESET:  *const c_char = c!("\x1b[0m");

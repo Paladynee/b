@@ -11,6 +11,7 @@
 #[macro_use]
 pub mod crust;
 pub mod nob;
+pub mod fighting_consteval;
 
 use core::ffi::*;
 use core::mem::zeroed;
