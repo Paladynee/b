@@ -19,10 +19,10 @@ use crate::targets::TargetAPI;
 use crate::params::*;
 
 
-enum_with_order_and_names! {
-    #[derive(Clone, Copy)]
+enum_with_order! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     #[repr(u8)]
-    enum Instr in INSTR_ORDER, names in INSTR_NAMES {
+    enum Instr {
         ADC,
         AND,
         ASL,
@@ -52,42 +52,43 @@ enum_with_order_and_names! {
 
 // TODO: maybe not search linearly, if this is too slow
 pub unsafe fn instr_from_string(s: *const c_char) -> Option<Instr> {
-    for i in 0..Instr::COUNT {
-        let curr: *const c_char = (*INSTR_NAMES)[i];
+    for i in 0..Instr::VARIANT_COUNT {
+        let curr: *const c_char = (*Instr::NAMES_SLICE)[i];
         if strcmp(s, curr) == 0 {
-            return Some((*INSTR_ORDER)[i]);
+            return Some((*Instr::ORDER_SLICE)[i]);
         }
     }
     return None;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum AddrMode {
-    IMM = 0,
-    ZP,
-    ZP_X,
-    ZP_Y,
-    ABS,
-    ABS_X,
-    ABS_Y,
-    IND_X,
-    IND_Y,
+enum_with_order! {
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    #[repr(u8)]
+    enum AddrMode {
+        IMM = 0,
+        ZP,
+        ZP_X,
+        ZP_Y,
+        ABS,
+        ABS_X,
+        ABS_Y,
+        IND_X,
+        IND_Y,
 
-    ACC,
-    REL,
-    IND,
-    IMPL, // implied, no arg
-
-    COUNT
+        ACC,
+        REL,
+        IND,
+        IMPL, // implied, no arg
+    }
 }
+
 use Instr::*;
 use AddrMode::*;
 
 // TODO: we currently use 0xFF for invalid opcode, because Some() and None
 // make this table way too big/hard to read
 const INVL: u8 = 0xFF;
-const OPCODES: [[u8; AddrMode::COUNT as usize]; Instr::COUNT as usize] =
+const OPCODES: [[u8; AddrMode::VARIANT_COUNT]; Instr::VARIANT_COUNT] =
        [// IMM    ZP    ZP_X   ZP_Y,  ABS   ABS_X  ABS_Y  IND_X  IND_Y   ACC    REL   IND, IMPL
 /*ADC*/[  0x69,  0x65,  0x75,  INVL, 0x6D,  0x7D,  0x79,  0x61,  0x71,  INVL,  INVL, INVL, INVL],
 /*AND*/[  0x29,  0x25,  0x35,  INVL, 0x2D,  0x3D,  0x39,  0x21,  0x31,  INVL,  INVL, INVL, INVL],

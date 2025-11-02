@@ -14,53 +14,83 @@ macro_rules! c {
 macro_rules! enum_with_order {
     (
         $( #[$attr:meta $($attr_args:tt)*] )*
-        enum $name:ident in $order_name:ident {
-            $($items:tt)*
+        enum $Ident:ident {
+            $(
+                $Item:ident $(= $init:expr)?
+            ),* $(,)?
         }
     ) => {
         $( #[$attr $($attr_args)*] )*
-        pub enum $name {
-            $($items)*
+        pub enum $Ident {
+            $($Item $(= $init)?),*
         }
-        pub const $order_name: *const [$name] = {
-            use $name::*;
-            &[$($items)*]
-        };
-        impl $name {
-            pub const COUNT: usize = unsafe { (&*$order_name).len() };
-        }
-    }
-}
 
-#[macro_export]
-macro_rules! enum_with_order_and_names {
-    (
-        $(
-            #[$attribute:meta $($attribute_args:tt)*]
-        )*
-        enum $name:ident in $order_name:ident, names in $names_name:ident {
-            $($items:tt),*
+        impl $Ident {
+            /*
+                Explanation:
+                Rust enums have the ability to specify their variants' values, like `A` in this enum:
+                enum Either {
+                    A = 1,
+                    B,
+                }
+                in order to make the ordered slice of variants, we need compile time buffers of unknown sizes.
+                we take this const fn approach from crates like `const_str`:
+                we have a const function with a const-generic array width (named order_variants_properly) to have an actual array
+                on the const stack which we can modify freely and return by-value. this is all it does.
+            */
+            const __ORDER_AND_NAMES_SLICES: (*const [$Ident], *const [*const c_char]) = {
+                use $Ident::*;
+                use $crate::fighting_consteval::*;
+                #[allow(unused_imports)]
+                use $crate::c;
+                // we assert that $Ident must be Copy here (as Crust requires us to do so!)
+                const fn _assert_copy<T: Copy>() {}
+                const _: () = _assert_copy::<$Ident>(); // your enum must derive Copy to have an ordered slice!
+                // this is the slice of declarations in declaration order. declaration order does not mean
+                // order of appearance in the ORDER_SLICE, as rust allows explicit discriminants.
+                const DECLS_AMOUNT: usize = UNORDERED_DECLS.len();
+                const UNORDERED_DECLS: *const [($Ident, *const c_char)] = &[
+                    $(
+                        ($Item, c!(stringify!($Item)))
+                    ),*
+                ];
+                // this is the slice of declarations that have a specified enum discriminant requirement.
+                // the order of elements inside this slice doesn't really matter.
+                // we don't have to worry about clashing requirements as the enum declaration itself handles that for us.
+                const AMOUNT_SPECIFIED: usize = SPECIFIED_DISCRIMINANTS.len();
+                const SPECIFIED_DISCRIMINANTS: *const [($Ident, *const c_char, u128)] = &[
+                    $( $(
+                        ($Item, c!(stringify!($Item)), $init), // negative discriminants are not supported, as Self::ORDER_SLICE would need to go backwards.
+                    )? )*
+                ];
+                // we pass the unordered declarations and the discriminant requirements to `order_decls_properly`,
+                // which handles the discriminant resolution in a const fn that is fully evaluated at const.
+                const RES: ([$Ident; DECLS_AMOUNT], [*const c_char; DECLS_AMOUNT]) = unsafe {
+                    #[allow(unused_imports)]
+                    use OrderDeclsError::*;
+                    match const { order_decls_properly::<$Ident, DECLS_AMOUNT, AMOUNT_SPECIFIED>(
+                        &*mkarray::<_, DECLS_AMOUNT>(UNORDERED_DECLS),
+                        &*mkarray::<_, AMOUNT_SPECIFIED>(SPECIFIED_DISCRIMINANTS)
+                    ) } {
+                        Ok(v) => v,
+                        Err(OrderDeclsError::RanOutOfDecls) =>
+                            panic!("enum_with_order: failed to order enum variants properly.\n\tthis is likely due to discriminant requirements leaving holes in the resulting ORDER_SLICE, which is not supported"),
+                        Err(OrderDeclsError::FinalSliceMissingEntries) =>
+                            panic!("enum_with_order: critical sanity check failed at compile time. this is a bug.\n\tthere were entries in your declaration that did not end up in the resulting `Self::ORDER_SLICE`"),
+                    }
+                };
+                // as constants don't allow destructuring (as in `const (ORDER, NAMES) = ...;`), we unpack RES
+                // manually and "return" it as the constant.
+                (
+                    &RES.0,
+                    &RES.1
+                )
+            };
+            pub const ORDER_SLICE: *const [$Ident] = $Ident::__ORDER_AND_NAMES_SLICES.0;
+            pub const NAMES_SLICE: *const [*const c_char] = $Ident::__ORDER_AND_NAMES_SLICES.1;
+            pub const VARIANT_COUNT: usize = unsafe { (&*$Ident::ORDER_SLICE).len() };
         }
-    ) => {
-        $(
-            #[$attribute $($attribute_args)*]
-        )*
-        pub enum $name {
-            $($items),*
-        }
-        pub const $order_name: *const [$name] = {
-            use $name::*;
-            &[$($items),*]
-        };
-        pub const $names_name: *const [*const c_char] = {
-            &[
-                $( c!(stringify!($items)) ),*
-            ]
-        };
-        impl $name {
-            pub const COUNT: usize = unsafe { (&*$order_name).len() };
-        }
-    }
+    };
 }
 
 pub unsafe fn slice_contains<Value: PartialEq>(slice: *const [Value], needle: *const Value) -> bool {

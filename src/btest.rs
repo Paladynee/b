@@ -38,7 +38,7 @@ const GARBAGE_FOLDER: *const c_char = c!("./build/tests/");
 
 enum_with_order! {
     #[derive(Copy, Clone)]
-    enum TestState in TEST_STATE_ORDER {
+    enum TestState {
         Enabled,
         Disabled,
     }
@@ -53,8 +53,8 @@ impl TestState {
     }
 
     unsafe fn from_name(name: *const c_char) -> Option<Self> {
-        for i in 0..TEST_STATE_ORDER.len() {
-            let state = (*TEST_STATE_ORDER)[i];
+        for i in 0..TestState::VARIANT_COUNT {
+            let state = (*TestState::ORDER_SLICE)[i];
             if strcmp(state.name(), name) == 0 {
                 return Some(state)
             }
@@ -75,7 +75,7 @@ pub enum Outcome {
 
 enum_with_order! {
     #[derive(Copy, Clone)]
-    enum ReportStatus in REPORT_STATUS_ORDER {
+    enum ReportStatus {
         OK,
         NeverRecorded,
         StdoutMismatch,
@@ -211,15 +211,15 @@ const RED:    *const c_char = c!("\x1b[31m");
 const BLUE:   *const c_char = c!("\x1b[94m");
 
 pub unsafe fn print_legend(row_width: usize) {
-    for i in 0..REPORT_STATUS_ORDER.len() {
-        let status = (*REPORT_STATUS_ORDER)[i];
+    for i in 0..ReportStatus::VARIANT_COUNT {
+        let status = (*ReportStatus::ORDER_SLICE)[i];
         printf(c!("%*s%s%s%s - %s\n"), row_width + 2, c!(""), status.color(), status.letter(), RESET, status.description());
     }
 }
 
 pub unsafe fn print_report_stats(stats: ReportStats) {
-    for i in 0..REPORT_STATUS_ORDER.len() {
-        let status = (*REPORT_STATUS_ORDER)[i];
+    for i in 0..ReportStatus::VARIANT_COUNT {
+        let status = (*ReportStatus::ORDER_SLICE)[i];
         printf(c!(" %s%s%s: %-3zu"), status.color(), status.letter(), RESET, stats.entries[i]);
     }
     printf(c!("\n"));
@@ -652,7 +652,7 @@ pub unsafe fn replay_tests(
 
 enum_with_order! {
     #[derive(Copy, Clone)]
-    enum Action in ACTION_ORDER {
+    enum Action {
         Replay,
         Record,
         Prune,
@@ -673,8 +673,8 @@ impl Action {
     }
 
     unsafe fn from_name(name: *const c_char) -> Option<Self> {
-        for i in 0..ACTION_ORDER.len() {
-            let action = (*ACTION_ORDER)[i];
+        for i in 0..Action::VARIANT_COUNT {
+            let action = (*Action::ORDER_SLICE)[i];
             if strcmp(name, action.name()) == 0 {
                 return Some(action)
             }
@@ -726,11 +726,11 @@ pub unsafe fn main(argc: i32, argv: *mut*mut c_char) -> Option<()> {
     if *list_actions {
         fprintf(stderr(), c!("Available actions:\n"));
         let mut width = 0;
-        for i in 0..ACTION_ORDER.len() {
-            width = cmp::max(width, strlen((*ACTION_ORDER)[i].name()));
+        for i in 0..Action::VARIANT_COUNT {
+            width = cmp::max(width, strlen((*Action::ORDER_SLICE)[i].name()));
         }
-        for i in 0..ACTION_ORDER.len() {
-            let action = (*ACTION_ORDER)[i];
+        for i in 0..Action::VARIANT_COUNT {
+            let action = (*Action::ORDER_SLICE)[i];
             match action {
                 Action::Replay => {
                     printf(c!("  %-*s - Replay the selected Test Matrix slice with expected outputs from %s.\n"), width, action.name(), json_path);

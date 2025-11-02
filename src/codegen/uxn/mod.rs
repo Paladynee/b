@@ -126,7 +126,7 @@ pub unsafe fn usage(params: *const [Param]) {
 
 enum_with_order! {
     #[derive(Clone, Copy)]
-    enum Uxn_Runner in UXN_RUNNER_ORDER {
+    enum Uxn_Runner {
         Uxncli,
         Uxnemu,
     }
@@ -148,8 +148,8 @@ impl Uxn_Runner {
     }
 
     unsafe fn from_name(name: *const c_char) -> Option<Self> {
-        for i in 0..UXN_RUNNER_ORDER.len() {
-            let runner = (*UXN_RUNNER_ORDER)[i];
+        for i in 0..Uxn_Runner::VARIANT_COUNT {
+            let runner = (*Uxn_Runner::ORDER_SLICE)[i];
             if strcmp(runner.name(), name) == 0 {
                 return Some(runner);
             }
@@ -210,8 +210,8 @@ pub unsafe fn new(a: *mut arena::Arena, args: *const [*const c_char]) -> Option<
         usage(params);
         log(Log_Level::ERROR, c!("Invalid Uxn runner name `%s`!"), runner_name);
         log(Log_Level::ERROR, c!("Valid names:"));
-        for i in 0..UXN_RUNNER_ORDER.len() {
-            let runner = (*UXN_RUNNER_ORDER)[i];
+        for i in 0..Uxn_Runner::VARIANT_COUNT {
+            let runner = (*Uxn_Runner::ORDER_SLICE)[i];
             log(Log_Level::ERROR, c!("    %s - %s"), runner.name(), runner.description());
         }
         return None;

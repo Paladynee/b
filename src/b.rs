@@ -30,6 +30,7 @@ pub mod nob;
 pub mod flag;
 #[macro_use]
 pub mod crust;
+pub mod fighting_consteval;
 pub mod arena;
 pub mod codegen;
 pub mod lexer;

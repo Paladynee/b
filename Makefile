@@ -19,6 +19,7 @@ RSS=\
 	$(SRC)/b.rs \
 	$(SRC)/ir.rs \
 	$(SRC)/crust.rs \
+	$(SRC)/fighting_consteval.rs \
 	$(SRC)/flag.rs \
 	$(SRC)/glob.rs \
 	$(SRC)/lexer.rs \

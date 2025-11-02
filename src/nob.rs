@@ -122,7 +122,7 @@ pub enum Log_Level {
 
 enum_with_order! {
     #[derive(Clone, Copy)]
-    enum File_Type in FILE_TYPE_ORDER {
+    enum File_Type {
         REGULAR,
         DIRECTORY,
         SYMLINK,
@@ -176,7 +176,7 @@ pub unsafe fn get_file_type(path: *const c_char) -> Option<File_Type> {
     }
     let result = get_file_type_raw(path);
     if result < 0 { return None; }
-    Some((*FILE_TYPE_ORDER)[result as usize])
+    Some((*File_Type::ORDER_SLICE)[result as usize])
 }
 
 pub unsafe fn write_entire_file(path: *const c_char, data: *const c_void, size: usize) -> Option<()> {
